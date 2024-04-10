@@ -1,0 +1,60 @@
+from threading import Thread, Condition
+
+# Initialize counts and conditions
+regular_count = 0
+super_count = 0
+team_id = 0
+lock = Condition()
+
+# Function executed by Regular Citizen threads
+def regular_citizen(rc_id):
+    global regular_count, super_count, team_id
+    with lock:
+        print(f"Regular Citizen {rc_id} is signing up")
+        regular_count += 1
+        # Wait until a team can be formed
+        while not (regular_count >= 2 and super_count >= 1 and regular_count + super_count >= 4):
+            lock.wait()
+        # Join a team
+        print(f"Regular Citizen {rc_id} has joined team {team_id}")
+        regular_count -= 1
+        # Check if a team is ready
+        if regular_count + super_count == 3 and super_count > 0:
+            print(f"team {team_id} is ready and now launching to battle (sc: {min(super_count, 2)} | rc: {3 - min(super_count, 2)})")
+            team_id += 1
+            regular_count -= 3 - min(super_count, 2)
+            super_count -= min(super_count, 2)
+        lock.notify_all()
+
+# Function executed by Super Citizen threads
+def super_citizen(sc_id):
+    global regular_count, super_count, team_id
+    with lock:
+        print(f"Super Citizen {sc_id} is signing up")
+        super_count += 1
+        # Wait until a team can be formed
+        while not (regular_count >= 2 and super_count >= 1 and regular_count + super_count >= 4):
+            lock.wait()
+        # Join a team
+        print(f"Super Citizen {sc_id} has joined team {team_id}")
+        super_count -= 1
+        # Check if a team is ready
+        if regular_count + super_count == 3 and super_count > 0:
+            print(f"team {team_id} is ready and now launching to battle (sc: {min(super_count, 2)} | rc: {3 - min(super_count, 2)})")
+            team_id += 1
+            regular_count -= 3 - min(super_count, 2)
+            super_count -= min(super_count, 2)
+        lock.notify_all()
+
+def main():
+    r = int(input("Enter the number of Regular Citizens: "))
+    s = int(input("Enter the number of Super Citizens: "))
+    
+    # Create and start threads for Regular and Super Citizens
+    for i in range(r):
+        Thread(target=regular_citizen, args=(i,)).start()
+    for i in range(s):
+        Thread(target=super_citizen, args=(i,)).start()
+
+if __name__ == "__main__":
+    main()
